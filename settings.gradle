@@ -1,2 +1,2 @@
 include ':app'
-rootProject.name = "Watch FAce"
+rootProject.name = "Crypto Watch Face"
