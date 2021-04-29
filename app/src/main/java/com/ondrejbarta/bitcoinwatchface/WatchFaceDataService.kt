@@ -30,7 +30,7 @@ open class WatchFaceDataService {
 
     var fetchFailed = false;
 
-    var currentCurrency: Currency = Currency.dogecoin
+    var currentCurrency: Currency = Currency.bitcoin
     var currentVsCurrency: VsCurrency = VsCurrency.EUR
     var currentDays: Int = 1
 

@@ -83,7 +83,7 @@ class MyWatchFace: CanvasWatchFaceService() {
         private var sHourHandLength: Float = 0F
 
         private var currentVsCurrency = WatchFaceDataService.VsCurrency.USD
-        private var currentCurrency = WatchFaceDataService.Currency.dogecoin
+        private var currentCurrency = WatchFaceDataService.Currency.bitcoin
         private var nextCurrency = currentCurrency
 
         /* Colors for all hands (hour, minute, seconds, ticks) based on photo loaded. */
