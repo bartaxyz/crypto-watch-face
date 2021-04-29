@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Watch Face -->
+    <color name="watchHandColor">@color/white</color>
+    <color name="watchTickColor">@color/white</color>
+    <color name="watchCircleColor">@color/white</color>
+    <color name="watchHighlightHandColor">@color/red_a200</color>
+    <color name="watchHourHandColor">@color/watchHandColor</color>
+    <color name="watchMinuteHandColor">@color/watchHandColor</color>
+    <color name="watchSecondHandColor">@color/watchHighlightHandColor</color>
+
+    <!-- Price Chart -->
+    <color name="chartTrendingUp">#67D48C</color>
+    <color name="chartTrendingDown">#D46767</color>
+    <color name="chartTrendingIndeterminate">#555555</color>
+</resources>

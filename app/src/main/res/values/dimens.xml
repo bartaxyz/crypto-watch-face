@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="activity_config_padding">24dp</dimen>
+    <dimen name="settings_preview_size">1800dp</dimen>
+</resources>
