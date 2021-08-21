@@ -1,15 +1,24 @@
-package com.ondrejbarta.bitcoinwatchface
+package com.ondrejbarta.bitcoinwatch
 
 import android.icu.text.NumberFormat
 import android.icu.text.SimpleDateFormat
-import drewcarlson.coingecko.CoinGeckoService
-import drewcarlson.coingecko.models.coins.MarketChart
-import io.ktor.client.*
-import io.ktor.client.engine.okhttp.*
-import io.ktor.network.sockets.*
+import android.util.Log
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import io.ktor.utils.io.errors.*
+import okhttp3.*
 import java.util.*
 import kotlin.math.abs
 
+class MarketChart(
+    val prices: List<List<String>>
+    /*
+    @SerialName("market_caps")
+    val marketCaps: List<List<String>>,
+    @SerialName("total_volumes")
+    val totalVolumes: List<List<String>>
+     */
+)
 
 data class MarketChartCache(
     val currency: WatchFaceDataService.Currency,
@@ -20,7 +29,13 @@ data class MarketChartCache(
 )
 
 open class WatchFaceDataService {
-    lateinit var marketChart: MarketChart
+    private val httpClient = OkHttpClient()
+    private val moshi = Moshi.Builder()
+        .add(KotlinJsonAdapterFactory())
+        .build()
+    private val gistJsonAdapter = moshi.adapter<MarketChart>(MarketChart::class.java)
+
+    var marketChart: MarketChart? = null
     var chartData: MutableList<Float> = mutableListOf()
     var chartDataMax: Float = -1f
     var chartDataMin: Float = -1f
@@ -28,6 +43,7 @@ open class WatchFaceDataService {
     var lastChartValue: Float = 0f
     var chartDataReduced: MutableList<Float> = mutableListOf()
 
+    var fetching = false;
     var fetchFailed = false;
 
     var currentCurrency: Currency = Currency.bitcoin
@@ -61,20 +77,24 @@ open class WatchFaceDataService {
         vsCurrency: VsCurrency,
         days: Int
     ): MarketChartCache? {
-        val indexesToRemove = mutableListOf<Int>();
+
+        cache.removeIf {
+            it.currency === currency &&
+            it.vsCurrency === vsCurrency &&
+            it.days == days &&
+            System.currentTimeMillis() - it.timestamp > cacheInvalidationTime
+        }
+
 
         for ((index, marketChartCache) in cache.withIndex()) {
             if (
                 marketChartCache.currency === currency &&
                 marketChartCache.vsCurrency === vsCurrency &&
-                marketChartCache.days == days
-            ) {
+                marketChartCache.days == days &&
                 // Check if timestamp isn't older than 10 minutes
-                if (System.currentTimeMillis() - marketChartCache.timestamp  < cacheInvalidationTime) {
-                    return marketChartCache
-                } else {
-                    cache.removeAt(index);
-                }
+                System.currentTimeMillis() - marketChartCache.timestamp  < cacheInvalidationTime
+            ) {
+                return marketChartCache
             }
         }
 
@@ -121,6 +141,8 @@ open class WatchFaceDataService {
         vsCurrency: VsCurrency = VsCurrency.USD,
         days: Int = 1
     ) {
+        if (fetching) return;
+
         if (currentCurrency !== currency || currentVsCurrency !== vsCurrency || currentDays !== days) {
             cleanData()
         }
@@ -129,11 +151,12 @@ open class WatchFaceDataService {
         currentVsCurrency = vsCurrency
         currentDays = days
 
-        val httpClient = HttpClient(OkHttp) {
-            expectSuccess = false
-        }
-        val coinGecko = CoinGeckoService(httpClient)
-
+        val url = "https://api.coingecko.com/api/v3/coins/" +
+                currency.toString() +
+                "/market_chart?vs_currency=" +
+                vsCurrency.toString() +
+                "&days=" + days.toString()
+        val request = Request.Builder().url(url).build();
         val cachedMarketChart = cacheLookup(
             currency,
             vsCurrency,
@@ -142,30 +165,50 @@ open class WatchFaceDataService {
 
         if (cachedMarketChart !== null) {
             marketChart = cachedMarketChart.marketChart
-        } else {
-            try {
-                marketChart = coinGecko.getCoinMarketChartById(
-                    currency.toString(),
-                    vsCurrency.toString(),
-                    days
-                );
-            } catch (error: Exception) {
-                fetchFailed = true;
-                return;
-            }
 
-            cacheInsert(
-                currency,
-                vsCurrency,
-                days,
-                marketChart
-            )
+            processMarketChart()
+        } else {
+            fetching = true;
+
+            httpClient.newCall(request).enqueue(object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    e.printStackTrace()
+                    fetchFailed = true;
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    response.use {
+                        fetching = false;
+
+                        Log.i("BOOHOO_RESPONSE", "We got a response")
+
+                        if (!response.isSuccessful) {
+                            fetchFailed = true
+                            return
+                        }
+
+                        val responseBody = response.body()!!.string()
+
+                        Log.i("BOOHOO_RESPONSE", responseBody)
+
+                        marketChart = gistJsonAdapter.fromJson(responseBody)
+
+                        marketChart?.let { cacheInsert(currency, vsCurrency, days, it) }
+
+                        processMarketChart()
+                    }
+                }
+            })
         }
+    }
+
+    fun processMarketChart() {
+        if (marketChart == null) return;
 
         chartData = mutableListOf()
         chartDataReduced = mutableListOf()
 
-        val prices = marketChart.prices
+        val prices = marketChart!!.prices
 
         firstChartValue = prices[0][1].toFloat()
         lastChartValue = prices[prices.lastIndex][1].toFloat()

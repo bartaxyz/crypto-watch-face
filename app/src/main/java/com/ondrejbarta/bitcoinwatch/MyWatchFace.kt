@@ -1,4 +1,4 @@
-package com.ondrejbarta.bitcoinwatchface
+package com.ondrejbarta.bitcoinwatch
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -13,7 +13,7 @@ import android.support.wearable.watchface.WatchFaceService
 import android.support.wearable.watchface.WatchFaceStyle
 import android.text.TextPaint
 import android.util.DisplayMetrics
-import android.util.SparseArray
+import android.util.Log
 import android.view.SurfaceHolder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -498,6 +498,8 @@ class MyWatchFace: CanvasWatchFaceService() {
                 watchFaceDataService.fetchFailed && timeDifference > (1 * 60 * 1000).toLong()
             ) {
                 currentCurrency = nextCurrency
+
+                Log.i("UPDATE_TIMER", "Just triggered fetching")
 
                 GlobalScope.launch(Dispatchers.Main) {
                     watchFaceDataService.fetchChartData(

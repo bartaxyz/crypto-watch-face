@@ -1,4 +1,4 @@
-package com.ondrejbarta.bitcoinwatchface;
+package com.ondrejbarta.bitcoinwatch;
 
 
 import android.support.wearable.complications.ComplicationData;

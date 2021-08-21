@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.ondrejbarta.bitcoinwatchface">
+    package="com.ondrejbarta.bitcoinwatch">
 
     <!-- Required to act as a custom watch face. -->
     <application
@@ -17,27 +17,14 @@
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
 
-        <!--
-        <activity android:name="android.support.wearable.complications.ComplicationHelperActivity"/>
-
-        <activity android:name="com.ondrejbarta.cryptowatchface.WatchFaceConfigActivity">
-            <intent-filter>
-                <action android:name=
-                    "com.example.android.wearable.watchface.CONFIG_DIGITAL" />
-                <category android:name=
-                    "com.google.android.wearable.watchface.category.WEARABLE_CONFIGURATION" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
-        -->
-
         <service
             android:name=".MyWatchFace"
             android:label="@string/bitcoin_watch_face"
-            android:permission="android.permission.BIND_WALLPAPER">
+            android:permission="android.permission.BIND_WALLPAPER"
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.service.wallpaper.WallpaperService" />
-
+                <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
             </intent-filter>
 
