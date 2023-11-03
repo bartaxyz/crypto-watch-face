@@ -1,4 +1,4 @@
-package com.ondrejbarta.bitcoinwatch
+package com.ondrejbarta.cryptowatchface
 
 import android.content.BroadcastReceiver
 import android.content.Context

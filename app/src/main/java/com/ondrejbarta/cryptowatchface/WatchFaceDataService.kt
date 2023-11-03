@@ -1,4 +1,4 @@
-package com.ondrejbarta.bitcoinwatch
+package com.ondrejbarta.cryptowatchface
 
 import android.icu.text.NumberFormat
 import android.icu.text.SimpleDateFormat
