@@ -136,7 +136,7 @@ open class WatchFaceDataService {
         )
     }
 
-    suspend fun fetchChartData(
+    fun fetchChartData(
         currency: Currency = Currency.bitcoin,
         vsCurrency: VsCurrency = VsCurrency.USD,
         days: Int = 1

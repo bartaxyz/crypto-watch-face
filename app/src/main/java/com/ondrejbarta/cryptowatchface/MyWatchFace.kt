@@ -12,12 +12,11 @@ import android.support.wearable.watchface.CanvasWatchFaceService
 import android.support.wearable.watchface.WatchFaceService
 import android.support.wearable.watchface.WatchFaceStyle
 import android.text.TextPaint
+import android.text.format.DateUtils.MINUTE_IN_MILLIS
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.SurfaceHolder
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import java.lang.ref.WeakReference
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -484,22 +483,31 @@ class MyWatchFace: CanvasWatchFaceService() {
             this@MyWatchFace.unregisterReceiver(mTimeZoneReceiver)
         }
 
+        var isFirstFetch = true;
         var timeSinceLastFetch: Long = 0;
-        /**
-         * Starts/stops the [.mUpdateTimeHandler] timer based on the state of the .
-         */
-        private fun updateTimer() {
-            val timeDifference = System.currentTimeMillis() - timeSinceLastFetch;
-            if (
-                currentCurrency !== nextCurrency ||
-                // Fetch every 30 minutes (or more)
-                (timeDifference > watchFaceDataService.cacheInvalidationTime) ||
-                // Fetch every 1 minutes (or more) in case of an error
-                watchFaceDataService.fetchFailed && timeDifference > (1 * 60 * 1000).toLong()
-            ) {
-                currentCurrency = nextCurrency
 
-                Log.i("UPDATE_TIMER", "Just triggered fetching")
+        private fun updateTimer() {
+            // Fetch if currency changes
+            val isNewCurrency = currentCurrency !== nextCurrency
+
+            // Fetch after cache invalidation time
+            val lastFetchTime = System.currentTimeMillis() - timeSinceLastFetch
+            val invalidationTime = lastFetchTime + watchFaceDataService.cacheInvalidationTime
+            val isDataObsolete = invalidationTime < System.currentTimeMillis()
+
+            // Fetch every 1 minutes (or more) in case of an error
+            val lastFetchTimeDifference = System.currentTimeMillis() - lastFetchTime;
+            val isFailedDelay = lastFetchTimeDifference > (1 * 60 * 1000).toLong()
+            val isFailedAndAfterDelay = watchFaceDataService.fetchFailed && isFailedDelay;
+
+            if (
+                isFirstFetch ||
+                isNewCurrency ||
+                isDataObsolete ||
+                isFailedAndAfterDelay
+            ) {
+                isFirstFetch = false
+                currentCurrency = nextCurrency
 
                 GlobalScope.launch(Dispatchers.Main) {
                     watchFaceDataService.fetchChartData(
@@ -511,7 +519,6 @@ class MyWatchFace: CanvasWatchFaceService() {
                     updateTimer()
                 }
             }
-
             mUpdateTimeHandler.removeMessages(MSG_UPDATE_TIME)
             if (shouldTimerBeRunning()) {
                 mUpdateTimeHandler.sendEmptyMessage(MSG_UPDATE_TIME)
