@@ -187,7 +187,12 @@ open class WatchFaceDataService {
                             return
                         }
 
-                        val responseBody = response.body()!!.string()
+                        val responseBody = response.body?.string();
+
+                        if (responseBody == null) {
+                            fetchFailed = true
+                            return
+                        }
 
                         Log.i("BOOHOO_RESPONSE", responseBody)
 
