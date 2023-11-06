@@ -405,7 +405,6 @@ class MyWatchFace: CanvasWatchFaceService() {
 
             currencyPricePaint.color = chartColor
 
-
             val gap = 12
 
             val totalLabelWidth = currencyLabelBounds.width() + gap + currencyPriceBounds.width() + gap + currencyDeltaBounds.width();
@@ -429,7 +428,6 @@ class MyWatchFace: CanvasWatchFaceService() {
         private var syncMessageTextBounds = Rect()
 
         private fun drawSyncMessage(canvas: Canvas, bounds: Rect) {
-            // val text = "Last sync at " + convertDate();
             val text = watchFaceDataService.getLastSyncMessage();
             syncMessagePaint.getTextBounds(text, 0, text.length, syncMessageTextBounds)
             syncMessageX = abs(bounds.centerX() - syncMessageTextBounds.centerX())
@@ -510,15 +508,32 @@ class MyWatchFace: CanvasWatchFaceService() {
                 currentCurrency = nextCurrency
 
                 GlobalScope.launch(Dispatchers.Main) {
-                    watchFaceDataService.fetchChartData(
+                    var result = watchFaceDataService.fetchChartData(
                         currentCurrency,
                         currentVsCurrency,
                         1
                     )
 
+                    result.onSuccess {
+                        Log.i("MyWatchFace", "Successfully fetched data")
+                        delay(1000)
+                        Log.i("MyWatchFace", "Invalidating")
+                        invalidate()
+                        updateTimer()
+                    }.onFailure {
+                        Log.i("MyWatchFace", "Failed to fetch data")
+                        delay(1000)
+                        Log.i("MyWatchFace", "Invalidating")
+                        invalidate()
+                        updateTimer()
+                    }
+
+                    delay(1000)
+                    invalidate()
                     updateTimer()
                 }
             }
+
             mUpdateTimeHandler.removeMessages(MSG_UPDATE_TIME)
             if (shouldTimerBeRunning()) {
                 mUpdateTimeHandler.sendEmptyMessage(MSG_UPDATE_TIME)

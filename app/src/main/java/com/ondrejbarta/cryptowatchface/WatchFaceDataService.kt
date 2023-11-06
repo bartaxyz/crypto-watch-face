@@ -6,6 +6,8 @@ import android.util.Log
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.ktor.utils.io.errors.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.*
 import java.util.*
 import kotlin.math.abs
@@ -136,12 +138,12 @@ open class WatchFaceDataService {
         )
     }
 
-    fun fetchChartData(
+    suspend fun fetchChartData(
         currency: Currency = Currency.bitcoin,
         vsCurrency: VsCurrency = VsCurrency.USD,
         days: Int = 1
-    ) {
-        if (fetching) return;
+    ): Result<MarketChart> = withContext(Dispatchers.IO) {
+        if (fetching) return@withContext Result.failure(IllegalStateException("Already fetching data"))
 
         if (currentCurrency !== currency || currentVsCurrency !== vsCurrency || currentDays !== days) {
             cleanData()
@@ -167,47 +169,36 @@ open class WatchFaceDataService {
             marketChart = cachedMarketChart.marketChart
 
             processMarketChart()
-        } else {
-            fetching = true;
 
-            httpClient.newCall(request).enqueue(object : Callback {
-                override fun onFailure(call: Call, e: IOException) {
-                    e.printStackTrace()
-                    fetchFailed = true;
-                }
+            return@withContext Result.success(marketChart!!)
+        }
 
-                override fun onResponse(call: Call, response: Response) {
-                    response.use {
-                        fetching = false;
+        fetching = true;
 
-                        Log.i("BOOHOO_RESPONSE", "We got a response")
-
-                        if (!response.isSuccessful) {
-                            fetchFailed = true
-                            return
-                        }
-
-                        val responseBody = response.body?.string();
-
-                        if (responseBody == null) {
-                            fetchFailed = true
-                            return
-                        }
-
-                        Log.i("BOOHOO_RESPONSE", responseBody)
-
-                        marketChart = gistJsonAdapter.fromJson(responseBody)
-
-                        marketChart?.let { cacheInsert(currency, vsCurrency, days, it) }
-
+        try {
+            val response = httpClient.newCall(request).execute() // synchronous network call
+            fetching = false
+            if (!response.isSuccessful) {
+                fetchFailed = true
+                Result.failure(IOException("Request not successful: ${response.code}"))
+            } else {
+                response.body?.string()?.let { responseBody ->
+                    gistJsonAdapter.fromJson(responseBody)?.let { marketChartResponse ->
+                        marketChart = marketChartResponse
+                        cacheInsert(currency, vsCurrency, days, marketChartResponse)
                         processMarketChart()
-                    }
-                }
-            })
+                        Result.success(marketChartResponse)
+                    } ?: Result.failure(IOException("Parsing error"))
+                } ?: Result.failure(IOException("Body is null"))
+            }
+        } catch (e: Exception) {
+            fetching = false
+            fetchFailed = true
+            Result.failure(e)
         }
     }
 
-    fun processMarketChart() {
+    private fun processMarketChart() {
         if (marketChart == null) return;
 
         chartData = mutableListOf()
