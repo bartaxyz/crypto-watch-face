@@ -331,6 +331,7 @@ class MyWatchFace: CanvasWatchFaceService() {
 
 
         override fun onDraw(canvas: Canvas, bounds: Rect) {
+            Log.i("WatchFace", "onDraw")
             val now = System.currentTimeMillis()
             mCalendar.timeInMillis = now
 
